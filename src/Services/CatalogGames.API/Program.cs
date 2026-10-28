@@ -1,11 +1,47 @@
+using Catalog.API.Data;
+using Microsoft.OpenApi.Models;
+using System.Reflection;
+using Microsoft.EntityFrameworkCore;
+
+
 var builder = WebApplication.CreateBuilder(args);
+
 
 // Add services to the container.
 
 builder.Services.AddControllers();
+
+builder.Services.AddDbContext<CatalogContext>(opt => opt.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
+
+builder.Services.AddSwaggerGen(
+     options => {
+         options.SwaggerDoc("v1",
+            new OpenApiInfo
+            {  // Uso el array de parámetros por nombre.
+                Title = "API Rest del Ejemplo eShopOnContainers",
+                Contact = new OpenApiContact
+                {
+                    Email = "mariaelena.@uclm.com", //cambiar estos datos por los nuestros
+                    Name = "María Elena Pretel Fernández", //cambiar estos datos por los nuestros
+                    Url = new Uri("https://www.esiiab.uclm.es")
+                },
+                License = new OpenApiLicense
+                {
+                    Name = "Apache License, 2.0",
+                    Url = new Uri("https://www.apache.org/licenses/LICENSE-2.0.html")
+                },
+                // Cuidado que Version es obligatorio.
+                Version = "v1"
+            });
+
+         // Para añadir la información de documentación del XML generado a Swagger.
+         var xmlfile = $"{Assembly.GetExecutingAssembly().GetName().Name}.xml";
+         var xmlPath = Path.Combine(AppContext.BaseDirectory, xmlfile);
+
+     });
 
 var app = builder.Build();
 
@@ -19,6 +55,23 @@ if (app.Environment.IsDevelopment())
 app.UseHttpsRedirection();
 
 app.UseAuthorization();
+
+
+using (var scope = app.Services.CreateScope())
+{
+    try
+    {
+        var db = scope.ServiceProvider.GetRequiredService<CatalogContext>();
+        //itcreatestheDB in case itdoesnot exist
+        //thisis usedonlywhiledevelopingthesystem
+        db.Database.Migrate();
+    }
+    catch (Exception ex)
+    {
+        var logger = app.Services.GetRequiredService<ILogger<Program>>();
+        logger.LogError(ex, "Anerror occurredseedingtheDB.");
+    }
+}
 
 app.MapControllers();
 
