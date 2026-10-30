@@ -17,14 +17,20 @@ public class ItemsController : ControllerBase
     [HttpGet]
     public async Task<ActionResult<IEnumerable<CatalogItem>>> GetCatalogItem()
     {
-        return await _context.CatalogItems.ToListAsync();
+        return await _context.CatalogItems
+            .Include(item => item.CatalogType)
+            .Include(item => item.CatalogBrand)
+            .ToListAsync();
     }
 
     // GET: api/CatalogItem/5
     [HttpGet("{id}")]
     public async Task<ActionResult<CatalogItem>> GetCatalogItem(int id)
     {
-        var catalogitem = await _context.CatalogItems.FindAsync(id);
+        var catalogitem = await _context.CatalogItems
+            .Include(item => item.CatalogType)
+            .Include(item => item.CatalogBrand)
+            .FirstOrDefaultAsync(item => item.Id == id);
 
         if (catalogitem == null)
         {

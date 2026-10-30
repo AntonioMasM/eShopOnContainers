@@ -21,12 +21,12 @@ builder.Services.AddSwaggerGen(
          options.SwaggerDoc("v1",
             new OpenApiInfo
             {  // Uso el array de parámetros por nombre.
-                Title = "API Rest del Ejemplo eShopOnContainers",
+                Title = "API Rest de Videojuegos eShopOnContainers",
                 Contact = new OpenApiContact
                 {
-                    Email = "mariaelena.@uclm.com", //cambiar estos datos por los nuestros
-                    Name = "María Elena Pretel Fernández", //cambiar estos datos por los nuestros
-                    Url = new Uri("https://www.esiiab.uclm.es")
+                    Email = "apmm2.@gcloud.ua.es", //cambiar estos datos por los nuestros
+                    Name = "Antonio Pascual Mas Martínez", //cambiar estos datos por los nuestros
+                    Url = new Uri("https://www.ua.es/")
                 },
                 License = new OpenApiLicense
                 {
