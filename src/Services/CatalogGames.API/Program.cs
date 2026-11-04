@@ -11,7 +11,34 @@ var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddControllers();
 
-builder.Services.AddDbContext<CatalogContext>(opt => opt.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+//builder.Services.AddDbContext<CatalogContext>(opt => opt.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+
+// la conexióna la bd estádefinidaen appsettings
+string? db2Use = Environment.GetEnvironmentVariable("DB2USE");
+// En caso de que el entorno de despliegue producción (Docker)
+if (db2Use == "DockerSQLServer")
+{
+    builder.Services.AddDbContext<CatalogContext>(options => {
+        options.UseSqlServer(builder.Configuration
+        .GetConnectionString("SQLServerDockerConnection"),
+        sqlServerOptionsAction: sqlOptions => {
+            //Recuperamos el nombre del Ensamblado donde está la migración
+            sqlOptions.MigrationsAssembly(
+    Assembly.GetExecutingAssembly().GetName().Name);
+            //Configuramos una conexión resiliente a la BD
+            sqlOptions.
+    EnableRetryOnFailure(maxRetryCount: 5,
+    maxRetryDelay: TimeSpan.FromSeconds(30),
+    errorNumbersToAdd: null);
+        });
+    });
+}
+else
+{
+    builder.Services.AddDbContext<CatalogContext>(options => options
+    .UseSqlServer(builder.Configuration
+    .GetConnectionString("DefaultConnection")));
+}
 
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
