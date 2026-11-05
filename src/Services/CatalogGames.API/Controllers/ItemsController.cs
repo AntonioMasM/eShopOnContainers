@@ -4,19 +4,24 @@ using Catalog.API.Model.DTO;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using System.Net;
+using Catalog.API.Integration.ItemEvents;
 
-[Route("api/[controller]")]
+
+[Route("api/items")]
 [ApiController]
-public class ItemsController : ControllerBase
+public class CatalogItemsController : ControllerBase
 {
     private readonly CatalogContext _context;
+    private readonly IEventsPublisher _eventsPublisher;
 
-    public ItemsController(CatalogContext context)
+    public CatalogItemsController(CatalogContext context, IEventsPublisher eventsPublisher)
     {
         _context = context;
+        _eventsPublisher = eventsPublisher;
     }
 
     // GET: api/CatalogItem
+    [HttpGet]
     [HttpGet]
     [ProducesResponseType(typeof(PaginatedItemsDTO<CatalogItemDTO>), (int)HttpStatusCode.OK)]
     [ProducesResponseType((int)HttpStatusCode.BadRequest)]
@@ -77,17 +82,30 @@ public class ItemsController : ControllerBase
 
     //PUT: api/Items/5
     //To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
-    [HttpPut]
+    [HttpPut("{id:int}")]
     [ProducesResponseType(typeof(CatalogItemDTO), (int)HttpStatusCode.OK)]
     [ProducesResponseType((int)HttpStatusCode.BadRequest)]
     [ProducesResponseType((int)HttpStatusCode.NotFound)]
-    public async Task<ActionResult<CatalogItemDTO>> PutCatalogItem(CatalogItemDTO itemDTO)
+    public async Task<ActionResult<CatalogItemDTO>> PutCatalogItem(int id, CatalogItemDTO itemDTO)
     {
         bool priceChanged = false;
-        if (itemDTO.Name == null) return BadRequest();
-        CatalogItem item = await _context.CatalogItems.Include(i => i.CatalogBrand).Include(i => i.CatalogType)
-            .FirstOrDefaultAsync(i => i.Name == itemDTO.Name);
-        if (item == null) return NotFound($"Item {itemDTO.Name} does not exist in the catalog");
+
+        if (id <= 0 || string.IsNullOrWhiteSpace(itemDTO.Name))
+            return BadRequest("El ID y el nombre deben ser válidos.");
+
+        CatalogItem? item = await _context.CatalogItems
+            .Include(i => i.CatalogBrand)
+            .Include(i => i.CatalogType)
+            .FirstOrDefaultAsync(i => i.Id == id);
+
+        if (item == null)
+            return NotFound($"No existe ningún producto con ID {id}.");
+
+        bool nameAlreadyExists = await _context.CatalogItems
+            .AnyAsync(i => i.Name == itemDTO.Name && i.Id != id);
+
+        if (nameAlreadyExists)
+            return BadRequest("Ya existe otro producto con ese nombre.");
         if (item.Price != itemDTO.Price) priceChanged = true;
         if (item.CatalogType.Type != itemDTO.CatalogType)
         {
@@ -113,23 +131,23 @@ public class ItemsController : ControllerBase
         try
         {
             await _context.SaveChangesAsync();
-            //if (priceChanged)
-            //{
-            //    var itemPriceChangedEvent = new ItemPriceChangedEvent
-            //    {
-            //        Name = item.Name,
-            //        Price = item.Price
-            //    };
-            //    _eventsPublisher.Publish(itemPriceChangedEvent);
+            if (priceChanged)
+            {
+                var itemPriceChangedEvent = new ItemPriceChangedEvent
+                {
+                    Name = item.Name,
+                    Price = item.Price
+                };
+                bool published = await _eventsPublisher.Publish(itemPriceChangedEvent);
 
-            //}
+            }
         }
         catch (DbUpdateConcurrencyException)
         {
             throw;
         }
 
-        return itemDTO;
+        return Ok(itemDTO);
     }
 
 

@@ -4,7 +4,8 @@
   </Folder>
   <Folder Name="/src/" />
   <Folder Name="/src/Infrastructure/" />
-  <Folder Name="/src/Services/" />
+  <Folder Name="/src/Services/">
+    <Project Path="src/Services/CatalogGames.API/CatalogGames.API.csproj" Id="92fa0202-1b43-4f24-9963-489fb6416046" />
+  </Folder>
   <Folder Name="/test/" />
-  <Project Path="src/Services/CatalogGames.API/CatalogGames.API.csproj" Id="92fa0202-1b43-4f24-9963-489fb6416046" />
 </Solution>

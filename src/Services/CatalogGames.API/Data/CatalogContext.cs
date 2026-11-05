@@ -16,7 +16,9 @@ namespace Catalog.API.Data
         protected override void OnModelCreating(ModelBuilder builder)
         {
             //builder.Entity<CatalogItem>().Property(ci => ci.Price).HasColumnType("decimal(5,3)");
-            builder.Entity<CatalogItem>().HasAlternateKey(ci => ci.Name);
+            builder.Entity<CatalogItem>()
+                .HasIndex(ci => ci.Name)
+                .IsUnique();
         }
 
     }

@@ -1,7 +1,10 @@
 using Catalog.API.Data;
+using Catalog.API.Integration;
+using Catalog.API.Integration.ItemEvents;
+using CatalogGames.API.Integration;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.OpenApi.Models;
 using System.Reflection;
-using Microsoft.EntityFrameworkCore;
 
 
 var builder = WebApplication.CreateBuilder(args);
@@ -70,6 +73,10 @@ builder.Services.AddSwaggerGen(
 
      });
 
+builder.Services.Configure<RabbitOptions>(builder.Configuration.GetSection("RabbitMq"));
+builder.Services.Configure<RabbitMqExchange>(builder.Configuration.GetSection("RabbitMqExchange"));
+builder.Services.AddSingleton<IEventsPublisher, EventsPublisher>();
+
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
@@ -101,5 +108,23 @@ using (var scope = app.Services.CreateScope())
 }
 
 app.MapControllers();
+
+try
+{
+    //registeringthepublisher
+    app.Lifetime.ApplicationStarted.Register(() => {
+        var eventsPublisher = app.Services.GetService<IEventsPublisher>();
+        eventsPublisher.Start();
+    });
+    app.Lifetime.ApplicationStopping.Register(() => {
+        var eventsPublisher = app.Services.GetService<IEventsPublisher>();
+        eventsPublisher.Stop();
+    });
+}
+catch (Exception ex)
+{
+    var logger = app.Services.GetRequiredService<ILogger<Program>>();
+    logger.LogError(ex, "Anerror whileconnectingto RabbitMq.");
+}
 
 app.Run();
